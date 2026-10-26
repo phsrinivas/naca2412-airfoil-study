@@ -15,10 +15,12 @@ Bottom line: the changes trade one flight phase for another instead of improving
 
 ## What's on the site
 
-- Summary of the paper, methods, and conclusions
-- An airfoil explorer that draws any NACA 4-digit shape
-- Interactive charts of both rounds of results
-- A simplified Cessna 172 performance simulator (lift, drag, L/D, stall speed)
+- **Wing Lab:** reshape the airfoil with sliders and try to beat the stock wing's score, using all 16 Round 1 results
+- **Flight Test:** guess which wing wins the climb, cruise, and approach, then see the real Round 2 data
+- **Simulator:** a simplified Cessna 172 performance model (lift, drag, L/D, stall speed)
+- **Decoder:** draws any NACA 4-digit airfoil at any angle of attack
+- **Research:** a short summary of the paper, charts, raw data, and references
+- **About:** a page about me and why I did this project
 
 ## Running it locally
 
@@ -31,10 +33,12 @@ python -m http.server 8000
 ## Files
 
 ```
-index.html      page content
+index.html      main page
+about.html      about me
 css/styles.css  styles (light and dark themes)
 js/data.js      the study's results and references
-js/main.js      charts, airfoil explorer, simulator
+js/main.js      Wing Lab, Flight Test, simulator, decoder, charts
+js/theme.js     light/dark toggle
 ```
 
 ## Credits

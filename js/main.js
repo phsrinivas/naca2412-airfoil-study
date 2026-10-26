@@ -72,14 +72,6 @@ function showTip(html, evt) {
 function hideTip() { tip.hidden = true; }
 const tipRow = (color, name, val) => `<div class="row"><span><i style="background:${color}"></i>${name}</span><span>${val}</span></div>`;
 
-/* ---------- theme ---------- */
-$('#theme-toggle').addEventListener('click', () => {
-  const root = document.documentElement;
-  const isDark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
-  root.dataset.theme = isDark ? 'light' : 'dark';
-  try { localStorage.setItem('theme', root.dataset.theme); } catch (e) {}
-});
-
 $('#ref-list').innerHTML = REFS.map((u) => `<li><a href="${u}" target="_blank" rel="noopener">${u.replace(/^https?:\/\//, '')}</a></li>`).join('');
 
 /* ---------- NACA 4-digit geometry ---------- */
@@ -164,10 +156,10 @@ const toPath = (pts, close) => pts.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed
     // angle-of-attack arc label
     if (a > 0) {
       const le = proj([0, 0]);
-      const t2 = svgEl('text', { x: le[0] - 10, y: le[1] - 12, 'text-anchor': 'end', 'font-family': 'IBM Plex Mono', 'font-size': 13, fill: 'var(--muted-fg)', class: 'foil-note' }, svg);
+      const t2 = svgEl('text', { x: le[0] - 10, y: le[1] - 12, 'text-anchor': 'end', 'font-family': 'JetBrains Mono', 'font-size': 13, fill: 'var(--muted-fg)', class: 'foil-note' }, svg);
       t2.textContent = `α = ${a}°`;
     }
-    const lbl = svgEl('text', { x: 632, y: 292, 'text-anchor': 'end', 'font-family': 'IBM Plex Mono', 'font-size': 12, fill: 'var(--muted-fg)', class: 'foil-note' }, svg);
+    const lbl = svgEl('text', { x: 632, y: 292, 'text-anchor': 'end', 'font-family': 'JetBrains Mono', 'font-size': 12, fill: 'var(--muted-fg)', class: 'foil-note' }, svg);
     lbl.textContent = `max thickness ${t}% · max camber ${c}%`;
 
     // what the study says about this shape
@@ -176,35 +168,230 @@ const toPath = (pts, close) => pts.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed
     const foil = FOILS.find((f) => f.id === code);
     if (ci >= 0 && ti >= 0 && (p === 4 || c === 0)) {
       const ld = R1[c][ti];
-      let html = `<strong>Tested in Round 1.</strong> L/D at 0°, 135 mph: <strong class="mono">${fmt(ld, 2)}</strong>.`;
+      let html = `<strong>I tested this one!</strong> Wing Lab score: <strong class="mono">${fmt(ld, 2)}</strong>.`;
       if (foil) {
-        const r2 = CONDS.map((k) => `${k.label} ${fmt(R2[k.id][foil.id], 2)}`).join(' · ');
-        html += ` Round 2: <span class="mono">${r2}</span>.`;
-      } else if (c === 0) html += ' A symmetric airfoil makes no lift at 0°.';
+        const r2 = CONDS.map((k) => `${k.label.toLowerCase()} ${fmt(R2[k.id][foil.id], 2)}`).join(', ');
+        html += ` Flight Test: <span class="mono">${r2}</span>.`;
+      } else if (c === 0) html += ' No camber, so no lift at 0°.';
       box.innerHTML = html;
     } else if (p !== 4 && c > 0) {
-      box.innerHTML = 'Camber position wasn\'t varied in the study because FoilSim doesn\'t offer it as an input. Every tested shape keeps max camber at 40% chord.';
+      box.innerHTML = 'I kept the camber peak at 40% in every test (FoilSim doesn\'t let you move it), so this shape wasn\'t tested.';
     } else {
-      box.innerHTML = 'Not one of the 16 tested shapes. The study used camber 0/2/5/9% × thickness 8/12/16/20%.';
+      box.innerHTML = 'I didn\'t test this exact shape. My tests used camber 0, 2, 5, 9% and thickness 8, 12, 16, 20%.';
     }
   }
   Object.values(inputs).forEach((i) => i.addEventListener('input', render));
   $$('.preset').forEach((b) => b.addEventListener('click', () => {
-    const f = FOILS.find((x) => x.id === b.dataset.preset);
-    inputs.c.value = f.c; inputs.p.value = 4; inputs.t.value = f.t;
+    const code = b.dataset.preset;
+    inputs.c.value = +code[0];
+    inputs.p.value = +code[1] || 4;
+    inputs.t.value = +code.slice(2);
     render();
   }));
   render();
 })();
 
-/* ---------- finalists strip ---------- */
-$('#finalists').innerHTML = FOILS.slice().sort((a, b) => a.rank - b.rank).map((f) => `
-  <div class="finalist">
-    <div class="finalist-name"><span class="dot" style="background:${f.color}"></span>${f.name}</div>
-    <div class="finalist-meta">${f.c}% camber · ${f.t}% thick${f.note ? ' · ' + f.note : ''}</div>
-    <div class="finalist-val">${fmt(f.r1, 2)}</div>
-    <div class="bar"><i style="width:${(f.r1 / 14.46) * 100}%;background:${f.color}"></i></div>
-  </div>`).join('');
+/* ---------- shared airfoil drawing ---------- */
+const STOCK_LD = R1[2][1]; // 12.06, the real NACA 2412
+const BEST_LD = 14.46;
+const ALL_R1 = CAMBERS.flatMap((c) => R1[c]).sort((a, b) => b - a);
+const nacaName = (c, t) => `${c}${c ? 4 : 0}${String(t).padStart(2, '0')}`;
+
+// surface height (chord units) at position u, read off a geometry's point list
+function surfaceAt(pts, u) {
+  for (let i = 1; i < pts.length; i++) {
+    if (pts[i][0] >= u) {
+      const [x0, y0] = pts[i - 1], [x1, y1] = pts[i];
+      return y0 + ((u - x0) / Math.max(x1 - x0, 1e-6)) * (y1 - y0);
+    }
+  }
+  return pts[pts.length - 1][1];
+}
+
+function miniFoil(c, t, color) {
+  const svg = svgEl('svg', { viewBox: '0 0 200 44', 'aria-hidden': 'true' });
+  const g = nacaGeometry(c / 100, 0.4, t / 100);
+  const proj = makeProjector(20 + 0.25 * 160, 26, 160, 0);
+  svgEl('path', { d: toPath([...g.up.map(proj), ...g.lo.slice().reverse().map(proj)], true), fill: color, 'fill-opacity': '.85' }, svg);
+  return svg;
+}
+
+/* ---------- Wing Lab ---------- */
+(function wingLab() {
+  const cIn = $('#lab-camber'), tIn = $('#lab-thick'), grid = $('#lab-grid'), svg = $('#lab-foil');
+  const cells = {};
+  let shown = STOCK_LD, anim;
+
+  // 4x4 grid of every tested wing, highest camber on top
+  CAMBERS.slice().reverse().forEach((c) => {
+    grid.insertAdjacentHTML('beforeend', `<span class="ax">${c}%</span>`);
+    THICKS.forEach((t, ti) => {
+      const v = R1[c][ti];
+      const pct = Math.round((v / BEST_LD) * 100);
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = fmt(v, 2);
+      b.style.background = `color-mix(in oklab, var(--heat-1) ${pct}%, var(--heat-0))`;
+      b.style.color = pct > 55 ? 'var(--heat-ink-hi)' : 'var(--heat-ink-lo)';
+      b.setAttribute('aria-label', `NACA ${nacaName(c, t)}, score ${fmt(v, 2)}`);
+      if (c === 2 && t === 12) { b.classList.add('base'); b.title = 'The stock Cessna wing'; }
+      b.addEventListener('click', () => { cIn.value = CAMBERS.indexOf(c); tIn.value = ti; render(); });
+      grid.appendChild(b);
+      cells[`${c}-${t}`] = b;
+    });
+  });
+  grid.insertAdjacentHTML('beforeend', '<span></span>' + THICKS.map((t) => `<span class="ax">${t}%</span>`).join(''));
+
+  function drawFoil(c, t) {
+    svg.innerHTML = '';
+    const g = nacaGeometry(c / 100, 0.4, t / 100);
+    const L = 440, x0 = 100, oy = 118;
+    const proj = makeProjector(x0 + 0.25 * L, oy, L, 0);
+    // streamlines that bend around the current shape
+    [-3, -2, -1, 1, 2, 3].forEach((k, i) => {
+      const pts = [];
+      for (let x = 10; x <= 630; x += 8) {
+        const u = (x - x0) / L;
+        const inside = clamp(u, 0, 1);
+        const fade = Math.exp(-(((u - inside) / 0.18) ** 2));
+        const surf = surfaceAt(k < 0 ? g.up : g.lo, inside) * fade;
+        pts.push([x, oy + k * 30 - surf * L / (0.7 + Math.abs(k) * 0.55)]);
+      }
+      svgEl('path', { d: toPath(pts), class: 'flow', style: `animation-delay:${(i * 0.21).toFixed(2)}s` }, svg);
+    });
+    svgEl('path', { d: toPath([...g.up.map(proj), ...g.lo.slice().reverse().map(proj)], true), fill: 'var(--fg)', opacity: '.92' }, svg);
+    svgEl('path', { d: toPath(g.cam.map(proj)), fill: 'none', stroke: 'var(--accent)', 'stroke-width': 2.5 }, svg);
+    // thickness marker at 30% chord
+    const top = proj([0.3, surfaceAt(g.up, 0.3)]), bot = proj([0.3, surfaceAt(g.lo, 0.3)]);
+    svgEl('line', { x1: top[0], x2: bot[0], y1: top[1] - 10, y2: bot[1] + 10, stroke: 'var(--primary)', 'stroke-width': 2, 'stroke-dasharray': '3 3' }, svg);
+    svgEl('text', { x: top[0] + 8, y: top[1] - 14, 'font-family': 'JetBrains Mono', 'font-size': 14, 'font-weight': 600, fill: 'var(--primary)' }, svg).textContent = `${t}% thick`;
+  }
+
+  function countTo(target) {
+    cancelAnimationFrame(anim);
+    const from = shown, start = performance.now();
+    const el = $('#lab-ld');
+    const step = (now) => {
+      const k = Math.min(1, (now - start) / 350);
+      shown = from + (target - from) * (1 - (1 - k) ** 3);
+      el.textContent = fmt(shown, 2);
+      if (k < 1) anim = requestAnimationFrame(step);
+    };
+    anim = requestAnimationFrame(step);
+  }
+
+  function verdict(c, t, v) {
+    const d = (v / STOCK_LD - 1) * 100;
+    const finalist = FOILS.some((f) => f.c === c && f.t === t && !f.note);
+    if (c === 2 && t === 12) return 'This is the real Cessna 172 wing. <strong>12.06</strong> is the score to beat. Hint: try making it thinner.';
+    if (c === 0) return 'No camber means a perfectly symmetric wing. At 0° it makes <strong>zero lift</strong>, so it scores zero. Give it some curve!';
+    if (v === BEST_LD) return `<strong>Top score!</strong> The best wing in my whole first round, ${fmt(d, 0)}% better than stock. It went on to the Flight Test below.`;
+    if (finalist) return `<strong>You beat the stock wing!</strong> This one made my top three and went on to the Flight Test below.`;
+    if (c === 9) return `Way too curved. At 9% camber the drag piles up and thickness barely changes anything. ${fmt(-d, 0)}% worse than stock.`;
+    return `${fmt(-d, 0)}% worse than stock. Thicker wings add drag at this speed. Try going thinner.`;
+  }
+
+  function render() {
+    [cIn, tIn].forEach(setRangeFill);
+    const ti = +tIn.value, c = CAMBERS[+cIn.value], t = THICKS[ti], v = R1[c][ti];
+    $('#lab-camber-v').textContent = c;
+    $('#lab-thick-v').textContent = t;
+    $('#lab-code').textContent = nacaName(c, t);
+    Object.entries(cells).forEach(([k, b]) => b.classList.toggle('on', k === `${c}-${t}`));
+    drawFoil(c, t);
+    countTo(v);
+    const d = (v / STOCK_LD - 1) * 100;
+    const isStock = c === 2 && t === 12;
+    const delta = $('#lab-delta');
+    delta.textContent = isStock ? 'the stock wing' : `${d >= 0 ? '+' : ''}${fmt(d, 1)}% vs stock`;
+    delta.className = 'score-delta mono ' + (isStock ? '' : d > 0 ? 'up' : 'down');
+    const meter = $('#lab-meter');
+    meter.style.width = (v / BEST_LD) * 100 + '%';
+    meter.classList.toggle('up', v > STOCK_LD);
+    const rank = ALL_R1.indexOf(v) + 1;
+    const tied = ALL_R1.filter((x) => x === v).length > 1;
+    $('#lab-rank').textContent = `#${rank} of 16${tied ? ' (tied)' : ''}`;
+    $('#lab-verdict').innerHTML = verdict(c, t, v);
+  }
+
+  [cIn, tIn].forEach((i) => i.addEventListener('input', render));
+  $('#lab-reset').addEventListener('click', () => { cIn.value = 1; tIn.value = 1; render(); });
+  render();
+})();
+
+/* ---------- Flight Test ---------- */
+(function flightTest() {
+  const INFO = {
+    climb: { pills: ['85 mph', 'Sea level', '10° angle of attack'], q: 'Which wing is most efficient in the climb?' },
+    cruise: { pills: ['138 mph', '5,000 ft', '3° angle of attack'], q: 'Which wing is most efficient at cruise?' },
+    approach: { pills: ['70 mph', 'Sea level', '8° angle of attack'], q: 'Which wing is most efficient on approach to landing?' },
+  };
+  const NOTES = {
+    climb: 'The stock 2412 wins the climb. The thinner 2408 is close behind, but the 5%-camber wings make so much extra drag that they fall way back.',
+    cruise: 'NACA 2408 wins cruise at 11.85, 4.7% better than stock. It\'s the only time any new wing beat the original.',
+    approach: 'The stock wing wins again on approach. At low speed and a steep angle, the 1930s shape is still the most efficient.',
+  };
+  const ORDER = ['climb', 'cruise', 'approach'];
+  const guesses = {};
+  let cond = 'climb';
+
+  const winnerOf = (k) => FOILS.reduce((a, b) => (R2[k][b.id] > R2[k][a.id] ? b : a)).id;
+
+  function render() {
+    $$('#ft-tabs button').forEach((b) => {
+      const k = b.dataset.ft;
+      b.classList.toggle('on', k === cond);
+      b.setAttribute('aria-selected', k === cond);
+      b.innerHTML = b.textContent.replace(' ✓', '') + (guesses[k] ? '<span class="done"> ✓</span>' : '');
+    });
+    const correct = ORDER.filter((k) => guesses[k] && guesses[k] === winnerOf(k)).length;
+    $('#ft-score').textContent = `${correct} / 3 correct`;
+    $('#ft-cond').innerHTML = INFO[cond].pills.map((p) => `<span>${p}</span>`).join('');
+    $('#ft-q').textContent = guesses[cond] ? 'Results' : INFO[cond].q;
+
+    const pick = guesses[cond];
+    const win = winnerOf(cond);
+    const max = Math.max(...FOILS.map((f) => R2[cond][f.id]));
+    const cards = $('#ft-cards');
+    cards.innerHTML = '';
+    cards.classList.toggle('revealed', !!pick);
+    FOILS.forEach((f) => {
+      const v = R2[cond][f.id];
+      const d = (v / R2[cond]['2412'] - 1) * 100;
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'ft-card' + (pick && f.id === win ? ' winner' : '');
+      card.disabled = !!pick;
+      card.appendChild(miniFoil(f.c, f.t, f.color));
+      card.insertAdjacentHTML('beforeend', `
+        <div class="ft-name"><i style="background:${f.color}"></i>${f.name}</div>
+        <div class="ft-meta">${f.c}% camber · ${f.t}% thick${f.note ? ' · stock wing' : ` · Wing Lab ${fmt(f.r1, 2)}`}</div>
+        <div class="ft-result">
+          <div>${f.id === win ? '<span class="badge win">Winner</span> ' : ''}${f.id === pick ? '<span class="badge pick">Your pick</span>' : ''}</div>
+          <div class="ft-val">${fmt(v, 2)}<small>${f.note ? 'stock' : `${d >= 0 ? '+' : ''}${fmt(d, 1)}%`}</small></div>
+          <div class="ft-bar"><i data-w="${(v / max) * 100}" style="background:${f.color}"></i></div>
+        </div>`);
+      card.addEventListener('click', () => { guesses[cond] = f.id; render(); });
+      cards.appendChild(card);
+    });
+    requestAnimationFrame(() => $$('.ft-bar i', cards).forEach((i) => { i.style.width = i.dataset.w + '%'; }));
+
+    const fb = $('#ft-feedback');
+    if (!pick) { fb.innerHTML = ''; return; }
+    const remaining = ORDER.filter((k) => !guesses[k]);
+    if (!remaining.length) {
+      fb.innerHTML = `<div class="ft-msg final"><p><strong>${correct} / 3.</strong> ${pick === win ? 'Nice call. ' : ''}${NOTES[cond]} The big picture: the new wings trade one phase of flight for another. None of them beats the 1930s design everywhere.</p><button class="btn" id="ft-again">Play again</button></div>`;
+      $('#ft-again').addEventListener('click', () => { ORDER.forEach((k) => delete guesses[k]); cond = 'climb'; render(); });
+    } else {
+      const next = remaining[0];
+      fb.innerHTML = `<div class="ft-msg"><p><strong>${pick === win ? 'Nice call!' : 'Not quite.'}</strong> ${NOTES[cond]}</p><button class="btn btn-primary" id="ft-next">Next: ${next[0].toUpperCase() + next.slice(1)} →</button></div>`;
+      $('#ft-next').addEventListener('click', () => { cond = next; render(); });
+    }
+  }
+
+  $$('#ft-tabs button').forEach((b) => b.addEventListener('click', () => { cond = b.dataset.ft; render(); }));
+  render();
+})();
 
 /* ---------- generic line chart ---------- */
 function lineChart(host, o) {
@@ -272,8 +459,8 @@ function renderR1() {
   const series = byThickness
     ? CAMBERS.map((c) => ({ name: `${c}% camber`, short: `${c}% cam.`, color: CAMBER_COLORS[c], values: R1[c] }))
     : THICKS.map((t, ti) => ({ name: `${t}% thick`, short: `${t}% thk.`, color: THICK_COLORS[t], values: CAMBERS.map((c) => R1[c][ti]) }));
-  $('#r1-title').textContent = byThickness ? 'L/D vs thickness, by camber' : 'L/D vs camber, by thickness';
-  $('.chart-sub', $('#r1-title').parentElement).textContent = byThickness ? 'Each line is one camber value' : 'Each line is one thickness value';
+  $('#r1-title').textContent = byThickness ? 'Round 1: L/D vs thickness' : 'Round 1: L/D vs camber';
+  $('.chart-sub', $('#r1-title').parentElement).textContent = byThickness ? 'One line per camber value, 0°, 135 mph' : 'One line per thickness value, 0°, 135 mph';
   $('#r1-cap').innerHTML = byThickness
     ? 'At 2% camber, the Cessna\'s own value, L/D nearly <strong>doubles</strong> from 7.62 at 20% thickness to 14.46 at 8%. At 9% camber, thickness barely matters: every value falls between 7.58 and 7.95.'
     : 'Every thickness group peaks <strong>between 2% and 5% camber</strong>, then falls at 9%. The camber curve isn\'t linear: more curvature helps up to a point, then hurts.';
@@ -294,33 +481,6 @@ $$('[data-r1]').forEach((b) => b.addEventListener('click', () => {
 }));
 renderR1();
 
-(function heatmap() {
-  const W = 360, H = 330, L = 64, T = 22, B = 46, R = 8;
-  const svg = newSvg($('#r1-heat'), W, H, 'Heatmap of L/D by camber and thickness');
-  const cw = (W - L - R) / 4, ch = (H - T - B) / 4;
-  const max = 14.46;
-  const rows = CAMBERS.slice().reverse();
-  rows.forEach((c, ri) => {
-    svgEl('text', { x: L - 10, y: T + ri * ch + ch / 2 + 4, 'text-anchor': 'end' }, svg).textContent = `${c}%`;
-    THICKS.forEach((t, ti) => {
-      const v = R1[c][ti];
-      const pct = Math.round((v / max) * 100);
-      const x = L + ti * cw, y = T + ri * ch;
-      const cell = svgEl('rect', { x: x + 1, y: y + 1, width: cw - 2, height: ch - 2, rx: 4, style: `fill:color-mix(in oklab, var(--heat-1) ${pct}%, var(--heat-0))` }, svg);
-      const isBase = c === 2 && t === 12;
-      if (isBase) svgEl('rect', { x: x + 3, y: y + 3, width: cw - 6, height: ch - 6, rx: 3, fill: 'none', stroke: 'var(--accent)', 'stroke-width': 2.5 }, svg);
-      const txt = svgEl('text', { x: x + cw / 2, y: y + ch / 2 + 4, 'text-anchor': 'middle', style: `fill:${pct > 55 ? 'var(--heat-ink-hi)' : 'var(--heat-ink-lo)'};font-weight:600` }, svg);
-      txt.textContent = fmt(v, 2);
-      const show = (evt) => showTip(`<b>NACA ${c}${c ? 4 : 0}${String(t).padStart(2, '0')}${isBase ? ' · baseline' : ''}</b>${c}% camber · ${t}% thick<br>L/D at 0°: ${fmt(v, 2)}`, evt);
-      [cell, txt].forEach((n) => { n.addEventListener('pointermove', show); n.addEventListener('pointerdown', show); n.addEventListener('pointerleave', hideTip); });
-    });
-  });
-  THICKS.forEach((t, ti) => { svgEl('text', { x: L + ti * cw + cw / 2, y: H - B + 18, 'text-anchor': 'middle' }, svg).textContent = `${t}%`; });
-  svgEl('text', { x: L, y: H - 6 }, svg).textContent = 'THICKNESS →';
-  svgEl('text', { x: 4, y: T - 8 }, svg).textContent = 'CAMBER';
-  svgEl('text', { x: W - R, y: H - 6, 'text-anchor': 'end' }, svg).textContent = '□ = NACA 2412';
-})();
-
 $('#r1-table').innerHTML = `<thead><tr><th>Camber \\ Thickness</th>${THICKS.map((t) => `<th class="num">${t}%</th>`).join('')}</tr></thead><tbody>` +
   CAMBERS.map((c) => `<tr><td>${c}%</td>${R1[c].map((v) => `<td class="num">${fmt(v, 2)}</td>`).join('')}</tr>`).join('') + '</tbody>';
 
@@ -328,7 +488,7 @@ $('#r1-table').innerHTML = `<thead><tr><th>Camber \\ Thickness</th>${THICKS.map(
 let r2Mode = 'ld';
 function renderR2() {
   const pct = r2Mode === 'pct';
-  legend($('#r2-legend'), FOILS.map((f) => ({ name: f.name + (f.note ? ' (baseline)' : ''), color: f.color })));
+  legend($('#r2-legend'), FOILS.map((f) => ({ name: f.name + (f.note ? ' (stock)' : ''), color: f.color })));
   const W = Math.max(320, Math.round($('#r2-chart').clientWidth) || 760), H = 320, L = 48, R = 12, T = 22, B = 52;
   const svg = newSvg($('#r2-chart'), W, H, 'L/D by flight condition for four airfoils');
   const val = (cond, f) => (pct ? ((R2[cond][f.id] / R2[cond]['2412']) - 1) * 100 : R2[cond][f.id]);
@@ -340,7 +500,7 @@ function renderR2() {
     svgEl('line', { x1: L, x2: W - R, y1: ys(t), y2: ys(t), class: t === 0 || (!pct && t === yMin) ? 'axis' : 'gridline' }, svg);
     svgEl('text', { x: L - 8, y: ys(t) + 4, 'text-anchor': 'end' }, svg).textContent = pct ? (t > 0 ? '+' : '') + fmt(t, 0) + '%' : fmt(t, 0);
   });
-  svgEl('text', { x: L, y: T - 8 }, svg).textContent = pct ? 'L/D CHANGE VS NACA 2412' : 'L / D';
+  svgEl('text', { x: L, y: T - 8 }, svg).textContent = pct ? 'L/D CHANGE VS STOCK WING' : 'L / D';
   const gw = (W - L - R) / 3, bw = Math.min(40, (gw - 40) / 4 - 2);
   CONDS.forEach((cond, gi) => {
     const gx = L + gi * gw + (gw - (bw * 4 + 2 * 3)) / 2;
@@ -359,7 +519,7 @@ function renderR2() {
       const d = ((raw / R2[cond.id]['2412']) - 1) * 100;
       const show = (evt) => {
         bar.setAttribute('opacity', '1');
-        showTip(`<b>${f.name}</b>${cond.label} · ${cond.detail}<br>L/D ${fmt(raw, 2)}${f.id === '2412' ? ' (baseline)' : ` · ${d >= 0 ? '+' : ''}${fmt(d, 1)}% vs baseline`}`, evt);
+        showTip(`<b>${f.name}</b>${cond.label} · ${cond.detail}<br>L/D ${fmt(raw, 2)}${f.id === '2412' ? ' (stock)' : ` · ${d >= 0 ? '+' : ''}${fmt(d, 1)}% vs stock`}`, evt);
       };
       hitRect.addEventListener('pointermove', show);
       hitRect.addEventListener('pointerdown', show);
@@ -419,7 +579,7 @@ function renderForces() {
 renderForces();
 
 $('#r2-table').innerHTML = `<thead><tr><th>Airfoil</th><th class="num">Round 1 (0°)</th>${CONDS.map((c) => `<th class="num">${c.label}</th>`).join('')}<th class="num">Climb lift (lb)</th><th class="num">Climb drag (lb)</th></tr></thead><tbody>` +
-  FOILS.map((f) => `<tr><td>${f.name}${f.note ? ' (baseline)' : ''}</td><td class="num">${fmt(f.r1, 2)}</td>${CONDS.map((c) => `<td class="num">${fmt(R2[c.id][f.id], 2)}</td>`).join('')}<td class="num">${fmt(CLIMB_FORCES[f.id][0], 0)}</td><td class="num">${fmt(CLIMB_FORCES[f.id][1], 0)}</td></tr>`).join('') + '</tbody>';
+  FOILS.map((f) => `<tr><td>${f.name}${f.note ? ' (stock)' : ''}</td><td class="num">${fmt(f.r1, 2)}</td>${CONDS.map((c) => `<td class="num">${fmt(R2[c.id][f.id], 2)}</td>`).join('')}<td class="num">${fmt(CLIMB_FORCES[f.id][0], 0)}</td><td class="num">${fmt(CLIMB_FORCES[f.id][1], 0)}</td></tr>`).join('') + '</tbody>';
 
 /* ---------- redraw charts at the new width when the window resizes ---------- */
 let renderSim = () => {};
