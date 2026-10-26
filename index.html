@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NACA 2412 Airfoil Study · Cessna 172 Lift-to-Drag Research</title>
+  <meta name="description" content="Can changing the camber or thickness of the Cessna 172's NACA 2412 airfoil improve its lift-to-drag ratio across climb, cruise, and approach? A FoilSim study of 76 airfoil tests, with interactive results and a flight-physics simulator." />
+  <meta property="og:title" content="Rethinking the Cessna 172 Wing: A NACA 2412 Airfoil Study" />
+  <meta property="og:description" content="76 FoilSim tests on camber, thickness, and angle of attack. Only one modified shape beat the 1930s baseline, and only at cruise." />
+  <meta property="og:type" content="website" />
+  <meta name="theme-color" content="#e6f1ec" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <script>
+    try { var t = localStorage.getItem('theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
+</head>
+<body>
+  <a class="skip" href="#abstract">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a href="#top" class="brand" aria-label="Back to top">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="18" height="18"><path d="M2 14.5c4.5-4 11-6.2 20-5.5-6.5 1.6-11 3.6-14.8 6.6L2 14.5Z" fill="currentColor"/></svg>
+        </span>
+        <span>
+          <span class="brand-name">NACA 2412 Study</span>
+          <span class="brand-sub mono">C172 / airfoil research</span>
+        </span>
+      </a>
+      <nav class="nav" aria-label="Sections">
+        <a href="#abstract">Abstract</a>
+        <a href="#airfoil">Airfoils</a>
+        <a href="#method">Method</a>
+        <a href="#results">Results</a>
+        <a href="#simulator">Simulator</a>
+        <a href="#conclusion">Conclusion</a>
+      </nav>
+      <button class="icon-btn" id="theme-toggle" aria-label="Toggle dark mode">
+        <svg class="i-moon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
+        <svg class="i-sun" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main id="top">
+    <!-- HERO -->
+    <section class="hero wrap">
+      <div class="hero-text">
+        <div class="eyebrow accent-line">Research paper · Aerodynamics</div>
+        <h1>Effects of Camber, Thickness, and Angle of Attack on the Lift-to-Drag Ratio of the <span class="hl">NACA 2412</span> Airfoil Used on the Cessna 172</h1>
+        <p class="byline">By <strong>Pranav Srinivas</strong></p>
+        <p class="lede">The Cessna 172 is the most-produced aircraft in history, and it still flies on an airfoil designed in the 1930s. This study used NASA's FoilSim to test whether a thinner or more curved wing section could fly more efficiently through climb, cruise, and approach.</p>
+        <div class="hero-cta">
+          <a class="btn btn-primary" href="#results">See the results</a>
+          <a class="btn" href="#simulator">Try the simulator</a>
+        </div>
+      </div>
+      <figure class="hero-foil panel">
+        <svg id="hero-foil" viewBox="0 0 600 260" role="img" aria-label="Animated airflow over a NACA 2412 airfoil"></svg>
+        <figcaption class="mono">NACA 2412 · 2% camber at 40% chord · 12% thick</figcaption>
+      </figure>
+    </section>
+
+    <!-- KEY FINDINGS -->
+    <section class="wrap stats" aria-label="Key findings">
+      <article class="stat panel">
+        <div class="eyebrow">Tests run</div>
+        <div class="stat-num mono">76</div>
+        <p>64 shape × angle tests in Round 1, plus 12 flight-condition tests in Round 2.</p>
+      </article>
+      <article class="stat panel">
+        <div class="eyebrow">Best single-condition L/D</div>
+        <div class="stat-num mono">14.46</div>
+        <p>NACA 2408 at 0°, 135 mph, sea level, compared with the baseline's 12.06.</p>
+      </article>
+      <article class="stat panel">
+        <div class="eyebrow">Cruise gain, NACA 2408</div>
+        <div class="stat-num mono">+4.7%</div>
+        <p>11.85 vs 11.32. This was the only condition where any shape beat the baseline.</p>
+      </article>
+      <article class="stat panel">
+        <div class="eyebrow">Verdict</div>
+        <div class="stat-num stat-word">Tradeoff</div>
+        <p>The baseline NACA 2412 still wins climb and approach. Camber, not thickness, drives the differences.</p>
+      </article>
+    </section>
+
+    <!-- ABSTRACT -->
+    <section id="abstract" class="wrap section">
+      <div class="section-head">
+        <div class="eyebrow">01 · Abstract</div>
+        <h2>The question</h2>
+      </div>
+      <div class="two-col">
+        <div class="prose">
+          <p>The Cessna 172, the most produced aircraft in history and a standard flight trainer, still uses a modified NACA 2412 airfoil developed in the 1930s. This study examined whether changing the airfoil's <strong>camber</strong> or <strong>thickness</strong> could improve its <strong>lift-to-drag ratio (L/D)</strong> across the flight conditions a training aircraft uses.</p>
+          <p>Lift and drag data were generated in NASA's FoilSim simulator in two rounds. Round 1 ran 64 tests that combined four camber values, four thickness values, and four angles of attack at a fixed 135 mph and sea level. Three shapes beat the baseline: NACA 2408, NACA 5408, and NACA 5412. Round 2 tested those three and the baseline under climb, cruise, and approach conditions.</p>
+          <p>Only NACA 2408 outperformed the baseline, and only at cruise. The two higher-camber shapes were the worst performers under every condition. Good performance at one test condition did not carry over to the rest of the flight envelope, and the modifications tested trade one phase of flight against another instead of improving on the NACA 2412 overall.</p>
+        </div>
+        <aside class="panel callout">
+          <div class="eyebrow">Why this matters</div>
+          <p>The NACA 2412 was never optimized the way modern airfoils are. It came from a general geometric formula, its airflow turns turbulent relatively early, and it was built to be thick, strong, and gentle in a stall.</p>
+          <p>Recent studies disagree on whether a different airfoil would serve the 172 better. One found the NACA 63-412 beats it at low angles of attack but falls behind at high ones. The real question is whether a <em>trainer</em> should favor efficiency or forgiving handling.</p>
+          <p>Unlike wingtip devices or composite materials, changing the 2D airfoil shape adds <strong>no manufacturing cost</strong> once the new shape has been designed and approved.</p>
+        </aside>
+      </div>
+    </section>
+
+    <!-- AIRFOIL EXPLORER -->
+    <section id="airfoil" class="wrap section">
+      <div class="section-head">
+        <div class="eyebrow">02 · Background</div>
+        <h2>Reading an airfoil name</h2>
+        <p class="sub">In the NACA 4-digit system, the <strong>first digit</strong> is maximum camber (% of chord), the <strong>second</strong> is where that camber peaks (tenths of chord), and the <strong>last two</strong> are maximum thickness (% of chord). Drag the sliders to reshape the wing section.</p>
+      </div>
+      <div class="explorer panel">
+        <div class="explorer-controls">
+          <div class="naca-code mono" aria-live="polite">NACA <span id="code">2412</span></div>
+          <div class="slider">
+            <div class="slider-top"><label for="ex-camber">Max camber</label><span class="chip mono"><span id="ex-camber-v">2</span>%</span></div>
+            <input id="ex-camber" type="range" min="0" max="9" step="1" value="2" />
+          </div>
+          <div class="slider">
+            <div class="slider-top"><label for="ex-pos">Camber position</label><span class="chip mono"><span id="ex-pos-v">40</span>% chord</span></div>
+            <input id="ex-pos" type="range" min="2" max="6" step="1" value="4" />
+          </div>
+          <div class="slider">
+            <div class="slider-top"><label for="ex-thick">Max thickness</label><span class="chip mono"><span id="ex-thick-v">12</span>%</span></div>
+            <input id="ex-thick" type="range" min="6" max="24" step="1" value="12" />
+          </div>
+          <div class="slider">
+            <div class="slider-top"><label for="ex-aoa">Angle of attack</label><span class="chip mono"><span id="ex-aoa-v">0</span>°</span></div>
+            <input id="ex-aoa" type="range" min="0" max="20" step="1" value="0" />
+          </div>
+          <div class="presets" role="group" aria-label="Study airfoils">
+            <button data-preset="2412" class="preset">2412 · baseline</button>
+            <button data-preset="2408" class="preset">2408</button>
+            <button data-preset="5408" class="preset">5408</button>
+            <button data-preset="5412" class="preset">5412</button>
+          </div>
+          <div class="tested" id="tested"></div>
+        </div>
+        <div class="explorer-view">
+          <svg id="foil" viewBox="0 0 640 300" role="img" aria-label="Airfoil cross-section"></svg>
+          <div class="foil-legend mono">
+            <span><i class="sw sw-chord"></i>chord line</span>
+            <span><i class="sw sw-camber"></i>mean camber line</span>
+            <span><i class="sw sw-flow"></i>relative wind</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="concepts">
+        <article class="panel concept">
+          <div class="eyebrow">Lift</div>
+          <div class="formula mono">L = ½ ρ V² A C<sub>L</sub></div>
+          <p>A wing turns the airflow downward, and by Newton's third law the air pushes the wing up.</p>
+        </article>
+        <article class="panel concept">
+          <div class="eyebrow">Drag</div>
+          <div class="formula mono">D = ½ ρ V² A C<sub>D</sub></div>
+          <p>Skin friction and pressure resist motion. Induced drag comes from wingtip vortices.</p>
+        </article>
+        <article class="panel concept">
+          <div class="eyebrow">Efficiency</div>
+          <div class="formula mono">L / D = C<sub>L</sub> / C<sub>D</sub></div>
+          <p>The shared ½ρV²A terms cancel. A higher L/D means more lift per pound of drag, so the airplane glides farther and burns less fuel.</p>
+        </article>
+        <article class="panel concept">
+          <div class="eyebrow">Reynolds number</div>
+          <div class="formula mono">Re ≈ 3.4M – 6.5M</div>
+          <p>Speed and size combined. An airfoil's best L/D changes with Re, so one test condition can't tell the whole story.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- METHOD -->
+    <section id="method" class="wrap section">
+      <div class="section-head">
+        <div class="eyebrow">03 · Methodology</div>
+        <h2>Two rounds of FoilSim testing</h2>
+        <p class="sub">Each test set camber, thickness, and angle of attack in FoilSim's Shape panel, and speed and altitude in its Flight Test panel. Lift, drag, C<sub>L</sub>, C<sub>D</sub>, and Reynolds number were recorded, and L/D = lift ÷ drag. Every result was checked against its inputs and for physical plausibility, then cross-checked against published XFOIL data from airfoiltools.com and UIUC wind-tunnel data.</p>
+      </div>
+      <div class="rounds">
+        <article class="panel round">
+          <div class="round-tag mono">ROUND 1 · 64 TESTS</div>
+          <h3>Screen every combination</h3>
+          <table class="kv">
+            <tr><th>Camber</th><td class="mono">0, 2, 5, 9 %</td></tr>
+            <tr><th>Thickness</th><td class="mono">8, 12, 16, 20 %</td></tr>
+            <tr><th>Angle of attack</th><td class="mono">0, 7, 14, 20°</td></tr>
+            <tr><th>Speed</th><td class="mono">135 mph (fixed)</td></tr>
+            <tr><th>Altitude</th><td class="mono">Sea level (fixed)</td></tr>
+            <tr><th>Reynolds no.</th><td class="mono">6,503,712</td></tr>
+          </table>
+          <p>The top three L/D values all came at 0°. They became the Round 2 finalists.</p>
+        </article>
+        <article class="panel round">
+          <div class="round-tag mono">ROUND 2 · 12 TESTS</div>
+          <h3>Fly the real flight envelope</h3>
+          <table class="data">
+            <thead><tr><th>Condition</th><th>Speed</th><th>Altitude</th><th>AoA</th><th>Re</th></tr></thead>
+            <tbody>
+              <tr><td>Climb</td><td class="mono">85 mph</td><td class="mono">0 ft</td><td class="mono">10°</td><td class="mono">4,094,930</td></tr>
+              <tr><td>Cruise</td><td class="mono">138 mph</td><td class="mono">5,000 ft</td><td class="mono">3°</td><td class="mono">5,888,305</td></tr>
+              <tr><td>Approach</td><td class="mono">70 mph</td><td class="mono">0 ft</td><td class="mono">8°</td><td class="mono">3,372,295</td></tr>
+            </tbody>
+          </table>
+          <p>The baseline and the three finalists were each run under all three conditions.</p>
+        </article>
+      </div>
+      <div class="panel finalists">
+        <div class="eyebrow">Round 1 → Round 2 finalists (L/D at 0°)</div>
+        <div class="finalist-row" id="finalists"></div>
+      </div>
+    </section>
+
+    <!-- RESULTS -->
+    <section id="results" class="wrap section">
+      <div class="section-head">
+        <div class="eyebrow">04 · Results</div>
+        <h2>Round 1: thin wins, and camber sets the ceiling</h2>
+        <p class="sub">L/D at 0° angle of attack, 135 mph, sea level, for all 16 shapes. Hover or tap any point for its value.</p>
+      </div>
+
+      <div class="chart-grid">
+        <figure class="panel chart-card">
+          <div class="chart-head">
+            <div>
+              <h3 id="r1-title">L/D vs thickness, by camber</h3>
+              <p class="chart-sub">Each line is one camber value</p>
+            </div>
+            <div class="seg" role="tablist" aria-label="X axis">
+              <button class="on" data-r1="thickness" role="tab" aria-selected="true">By thickness</button>
+              <button data-r1="camber" role="tab" aria-selected="false">By camber</button>
+            </div>
+          </div>
+          <div class="legend" id="r1-legend"></div>
+          <div class="chart" id="r1-chart"></div>
+          <figcaption id="r1-cap">At 2% camber, the Cessna's own value, L/D nearly <strong>doubles</strong> from 7.62 at 20% thickness to 14.46 at 8%. At 9% camber, thickness barely matters: every value falls between 7.58 and 7.95.</figcaption>
+        </figure>
+
+        <figure class="panel chart-card">
+          <div class="chart-head">
+            <div>
+              <h3>The full grid</h3>
+              <p class="chart-sub">Darker = higher L/D</p>
+            </div>
+          </div>
+          <div class="chart" id="r1-heat"></div>
+          <figcaption>A 0% camber airfoil makes <strong>zero lift</strong> at 0°, as theory predicts for a symmetric shape. Peak L/D falls with every step up in thickness, with no exceptions.</figcaption>
+        </figure>
+      </div>
+
+      <details class="panel table-view">
+        <summary>Show Round 1 data table</summary>
+        <div class="table-scroll"><table class="data" id="r1-table"></table></div>
+      </details>
+
+      <div class="section-head sub-head">
+        <h2>Round 2: the baseline wins where it counts</h2>
+        <p class="sub">The four finalists under climb, cruise, and approach. The best shape in each condition is labeled.</p>
+      </div>
+
+      <figure class="panel chart-card wide">
+        <div class="chart-head">
+          <div>
+            <h3>L/D by flight condition</h3>
+            <p class="chart-sub">Higher is more efficient</p>
+          </div>
+          <div class="seg" role="tablist" aria-label="Measure">
+            <button class="on" data-r2="ld" role="tab" aria-selected="true">L/D ratio</button>
+            <button data-r2="pct" role="tab" aria-selected="false">% vs baseline</button>
+          </div>
+        </div>
+        <div class="legend" id="r2-legend"></div>
+        <div class="chart" id="r2-chart"></div>
+        <figcaption>NACA 2408 beats the baseline only at cruise (+4.7%) and loses about 3–4% at climb and approach, the low-speed phases that matter most for student pilots. Both 5%-camber shapes trail at every condition.</figcaption>
+      </figure>
+
+      <div class="two-col">
+        <figure class="panel chart-card">
+          <div class="chart-head"><div><h3>Climb forces (10°, 85 mph)</h3><p class="chart-sub">Lift and drag in pounds</p></div></div>
+          <div class="chart" id="r2-forces"></div>
+          <figcaption>The 5%-camber shapes bend the airflow harder. They make about 20% more lift but about 47% more drag, so their L/D drops.</figcaption>
+        </figure>
+        <div class="panel callout">
+          <div class="eyebrow">What the data says</div>
+          <ul class="checks">
+            <li><b>Camber dominates.</b> 5408 and 5412 perform almost identically despite different thickness.</li>
+            <li><b>One condition misleads.</b> Two shapes that beat the baseline in Round 1 lost everywhere in Round 2.</li>
+            <li><b>The 1930s numbers hold up.</b> 2% camber produced the highest L/D anywhere in the 64-test grid.</li>
+            <li><b>Consistent with prior work.</b> The NACA 63-412 study found the same kind of angle-dependent tradeoff.</li>
+          </ul>
+        </div>
+      </div>
+
+      <details class="panel table-view">
+        <summary>Show Round 2 data table</summary>
+        <div class="table-scroll"><table class="data" id="r2-table"></table></div>
+      </details>
+    </section>
+
+    <!-- SIMULATOR -->
+    <section id="simulator" class="section sim-band">
+      <div class="wrap">
+        <div class="section-head">
+          <div class="eyebrow">05 · Interactive</div>
+          <h2>Fly the Cessna 172 yourself</h2>
+          <p class="sub">A simplified whole-aircraft model based on the 172's real wing area (16.2 m²), aspect ratio (7.32), and clean C<sub>L,max</sub> of 1.5. Change one condition at a time and watch lift, drag, L/D, and stall speed respond.</p>
+        </div>
+
+        <div class="sim">
+          <aside class="panel sim-controls">
+            <div class="sim-controls-head">
+              <h3>Flight conditions</h3>
+              <button class="link-btn mono" id="sim-reset">↺ Reset</button>
+            </div>
+            <div class="slider">
+              <div class="slider-top"><label for="s-alt">Pressure altitude</label><span class="chip mono"><span id="s-alt-v"></span> ft</span></div>
+              <input id="s-alt" type="range" min="0" max="12000" step="100" value="3500" />
+            </div>
+            <div class="slider">
+              <div class="slider-top"><label for="s-spd">True airspeed</label><span class="chip mono"><span id="s-spd-v"></span> kt</span></div>
+              <input id="s-spd" type="range" min="45" max="145" step="1" value="105" />
+            </div>
+            <div class="slider">
+              <div class="slider-top"><label for="s-wt">Aircraft weight</label><span class="chip mono"><span id="s-wt-v"></span> lb</span></div>
+              <input id="s-wt" type="range" min="1800" max="2550" step="10" value="2350" />
+            </div>
+            <div class="slider">
+              <div class="slider-top"><label for="s-tmp">Outside air temp</label><span class="chip mono"><span id="s-tmp-v"></span> °C</span></div>
+              <input id="s-tmp" type="range" min="-25" max="45" step="1" value="15" />
+            </div>
+            <p class="note">Pressure follows the ISA model. Temperature is the actual outside air temperature, so warm air visibly lowers density.</p>
+          </aside>
+
+          <div class="sim-main">
+            <div class="panel sim-picture">
+              <div class="sim-pic-top">
+                <div>
+                  <div class="eyebrow">Current flight picture</div>
+                  <h3>Flying at <span class="hl mono" id="sim-spd-h">105 kt</span></h3>
+                </div>
+                <div class="margin-box" id="margin-box">
+                  <div class="eyebrow">Stall margin</div>
+                  <div class="mono margin-val" id="margin-val">+0 kt</div>
+                </div>
+              </div>
+              <div class="speed-bar" aria-hidden="true">
+                <div class="speed-fill" id="speed-fill"></div>
+                <div class="stall-mark" id="stall-mark"></div>
+              </div>
+              <div class="speed-scale mono"><span>45</span><span>95</span><span>145 KTAS</span></div>
+            </div>
+
+            <div class="metrics">
+              <div class="panel metric m-primary"><div class="eyebrow">Lift</div><div class="metric-num mono" id="m-lift"></div><p id="m-lift-d"></p></div>
+              <div class="panel metric m-accent"><div class="eyebrow">Total drag</div><div class="metric-num mono" id="m-drag"></div><p id="m-drag-d"></p></div>
+              <div class="panel metric m-ink"><div class="eyebrow">Lift / drag</div><div class="metric-num mono" id="m-ld"></div><p>Lift per pound of drag</p></div>
+              <div class="panel metric m-primary"><div class="eyebrow">Stall speed</div><div class="metric-num mono" id="m-stall"></div><p id="m-stall-d"></p></div>
+            </div>
+
+            <figure class="panel chart-card">
+              <div class="chart-head">
+                <div>
+                  <h3 id="sim-chart-title">L/D across airspeed</h3>
+                  <p class="chart-sub">Altitude, temperature, and weight held at your settings</p>
+                </div>
+                <div class="seg" role="tablist" aria-label="Simulator chart">
+                  <button class="on" data-sim="ld" role="tab" aria-selected="true">L/D curve</button>
+                  <button data-sim="forces" role="tab" aria-selected="false">Forces</button>
+                </div>
+              </div>
+              <div class="legend" id="sim-legend"></div>
+              <div class="chart" id="sim-chart"></div>
+              <figcaption id="sim-cap">The peak marks the most aerodynamically efficient speed in this simplified model. That's not the same as the fastest speed.</figcaption>
+            </figure>
+
+            <div class="cue" id="sim-cue"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CONCLUSION -->
+    <section id="conclusion" class="wrap section">
+      <div class="section-head">
+        <div class="eyebrow">06 · Conclusion</div>
+        <h2>A tradeoff, not an upgrade</h2>
+      </div>
+      <div class="two-col">
+        <div class="prose">
+          <p>Three shapes beat the NACA 2412 under a single fixed test condition. Tested across climb, cruise, and approach, only NACA 2408 kept any advantage, and only at cruise. NACA 5408 and NACA 5412 fell behind the baseline everywhere, despite having beaten it in Round 1.</p>
+          <p>Camber, more than thickness, separated the shapes. NACA 2408's roughly 4.7% cruise gain came at the cost of climb and approach, the two lower-speed phases most relevant to flight training. Like the earlier NACA 63-412 comparison, this suggests the NACA 2412's original design already strikes a reasonable balance for the 172's mission.</p>
+          <h3>Limitations</h3>
+          <p>FoilSim is a simplified educational simulator. Only four values each of camber, thickness, and angle of attack were tested, and the position of maximum camber couldn't be changed in FoilSim. Stall angle and stall speed weren't measured, so the handling and safety question remains open.</p>
+          <h3>Future work</h3>
+          <p>Future work could test a wider range of camber and thickness combinations and use finer angle-of-attack steps to pinpoint each shape's peak L/D. Calculating stall speed and post-stall behavior directly would show how each shape affects the forgiving handling a trainer needs.</p>
+        </div>
+        <aside class="panel callout objectives">
+          <div class="eyebrow">Six objectives</div>
+          <ol>
+            <li>Explain why the NACA 2412 isn't highly efficient by modern standards ✓</li>
+            <li>Establish a FoilSim baseline at Cessna-realistic Reynolds numbers ✓</li>
+            <li>Define modified shapes with the NACA 4-digit system ✓</li>
+            <li>Generate matching data for every modified shape ✓</li>
+            <li>Compare across climb, cruise, and approach ✓</li>
+            <li>Judge improvement vs. tradeoff, including handling: <em>partly answered, since stall wasn't measured</em></li>
+          </ol>
+        </aside>
+      </div>
+    </section>
+
+    <!-- REFERENCES -->
+    <section id="references" class="wrap section">
+      <details class="panel refs">
+        <summary><span class="eyebrow">07 · References</span> <span class="refs-count mono">28 sources</span></summary>
+        <ol class="ref-list mono" id="ref-list"></ol>
+      </details>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <span class="mono">NACA 2412 / CESSNA 172 AIRFOIL STUDY</span>
+      <span>Data generated with NASA FoilSim · Simulator is an educational model</span>
+    </div>
+  </footer>
+
+  <div class="tip" id="tip" role="tooltip" hidden></div>
+  <script src="js/data.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
